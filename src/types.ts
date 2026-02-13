@@ -17,4 +17,6 @@ export interface RepoInfo {
 export interface CliArgs {
   pathFile?: string;
   help: boolean;
+  config: boolean;
+  cleanup: boolean;
 }

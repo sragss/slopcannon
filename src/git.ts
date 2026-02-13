@@ -9,7 +9,8 @@ function exec(args: string[], cwd?: string): string {
   });
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString().trim();
-    throw new Error(`git ${args[0]} failed: ${stderr}`);
+    // Surface the git message without the "git <cmd> failed:" prefix for common operations
+    throw new Error(stderr || `git ${args.join(" ")} failed with exit code ${result.exitCode}`);
   }
   return result.stdout.toString().trim();
 }
@@ -116,6 +117,74 @@ export function computeWorktreePath(
 ): string {
   const safeBranch = branch.replace(/\//g, "-");
   return path.join(parentDir, `${repoName}-${safeBranch}`);
+}
+
+export interface WorktreeEntry {
+  path: string;
+  branch: string | null; // null if detached HEAD
+  isMain: boolean;       // is this the main worktree (not a linked one)
+}
+
+export function listWorktrees(root: string): WorktreeEntry[] {
+  const raw = exec(["worktree", "list", "--porcelain"], root);
+  const entries: WorktreeEntry[] = [];
+  let current: Partial<WorktreeEntry> = {};
+
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      current.path = line.slice("worktree ".length);
+    } else if (line.startsWith("branch refs/heads/")) {
+      current.branch = line.slice("branch refs/heads/".length);
+    } else if (line === "detached") {
+      current.branch = null;
+    } else if (line === "") {
+      if (current.path) {
+        entries.push({
+          path: current.path,
+          branch: current.branch ?? null,
+          isMain: entries.length === 0, // first entry is always the main worktree
+        });
+      }
+      current = {};
+    }
+  }
+  // Handle last entry if no trailing newline
+  if (current.path) {
+    entries.push({
+      path: current.path,
+      branch: current.branch ?? null,
+      isMain: entries.length === 0,
+    });
+  }
+
+  return entries;
+}
+
+export function isBranchMerged(root: string, branch: string, into: string): boolean {
+  try {
+    const merged = exec(["branch", "--merged", into], root);
+    return merged.split("\n").some((l) => l.trim() === branch);
+  } catch {
+    return false;
+  }
+}
+
+export function isBranchDeletedOnRemote(root: string, branch: string): boolean {
+  const result = Bun.spawnSync(
+    ["git", "rev-parse", "--verify", `refs/remotes/origin/${branch}`],
+    { cwd: root, stdout: "pipe", stderr: "pipe" }
+  );
+  return result.exitCode !== 0;
+}
+
+export function removeWorktree(root: string, worktreePath: string, force: boolean = false): void {
+  const args = ["worktree", "remove", worktreePath];
+  if (force) args.push("--force");
+  exec(args, root);
+}
+
+export function deleteBranch(root: string, branch: string, force: boolean = false): void {
+  exec(["branch", force ? "-D" : "-d", branch], root);
 }
 
 export function createWorktree(
