@@ -28,11 +28,13 @@ What it does:
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
-  const result: CliArgs = { help: false, config: false, cleanup: false };
+  const result: CliArgs = { help: false, version: false, config: false, cleanup: false };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--help" || args[i] === "-h") {
       result.help = true;
+    } else if (args[i] === "--version" || args[i] === "-v" || args[i] === "-V") {
+      result.version = true;
     } else if (args[i] === "--path-file" && i + 1 < args.length) {
       result.pathFile = args[++i];
     } else if (args[i] === "config") {
@@ -63,6 +65,12 @@ function requireGit(deps: DepCheckResult) {
 
 async function main() {
   const args = parseArgs();
+
+  if (args.version) {
+    const pkg = await Bun.file(new URL("../package.json", import.meta.url)).json();
+    console.log(pkg.version);
+    process.exit(0);
+  }
 
   if (args.help) {
     console.log(HELP);
