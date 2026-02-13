@@ -13,6 +13,11 @@ const ADJECTIVES = [
   "overcooked", "sentient", "volatile", "cursed", "legendary",
   "questionable", "unsupervised", "greasy", "tactical", "forbidden",
   "nuclear", "haunted", "bootleg", "squishy", "untested",
+  "turbo", "mega", "bigly", "massive", "humongous",
+  "truculent", "cackling", "unruly", "blistering", "preposterous",
+  "ludicrous", "rotund", "swole", "thicc", "chunky",
+  "maximum", "supreme", "bonkers", "absolute", "industrial",
+  "weaponized", "premium",
 ];
 
 const NOUNS = [
@@ -21,6 +26,10 @@ const NOUNS = [
   "speedrun", "cowboy", "noodle", "shambles", "vibes",
   "dumpster", "kraken", "mongoose", "burrito", "firehose",
   "trebuchet", "gopher", "waffle", "blunderbuss", "hotdog",
+  "jester", "slop", "gumption", "maxx", "chungus",
+  "honk", "donkey", "biscuit", "rascal", "torpedo",
+  "avalanche", "stampede", "ruckus", "shenanigan", "juggernaut",
+  "unit", "whopper", "caboose", "hooligan",
 ];
 
 function randomBranchName(): string {
@@ -97,21 +106,23 @@ export async function runTui(): Promise<string | null> {
   p.log.info(`${info.repoName}${info.remoteUrl ? ` (${info.remoteUrl})` : ""}`);
 
   // Select base branch
-  const baseBranch = await p.autocomplete({
+  const defaultEntry = info.branches.find((b) => b.name === info.defaultBranch);
+  const baseBranchEntry = await p.autocomplete({
     message: "Base branch",
     options: info.branches.map((b) => ({
       value: b,
-      label: b,
-      hint: b === info.defaultBranch ? "default" : undefined,
+      label: b.name,
+      hint: b.name === info.defaultBranch ? "default" : undefined,
     })),
     maxItems: 10,
-    initialValue: info.defaultBranch,
+    initialValue: defaultEntry,
     placeholder: "Type to filter...",
   });
-  if (p.isCancel(baseBranch)) {
+  if (p.isCancel(baseBranchEntry)) {
     p.outro("Cancelled.");
     return null;
   }
+  const baseBranch = (baseBranchEntry as typeof info.branches[number]);
 
   // New branch name
   const defaultName = randomBranchName();
@@ -138,7 +149,7 @@ export async function runTui(): Promise<string | null> {
 
   // Show command
   p.log.step(
-    `git worktree add -b ${branchName} ${worktreePath} ${baseBranch}`
+    `git worktree add -b ${branchName} ${worktreePath} ${baseBranch.ref}`
   );
 
   // Confirm
@@ -154,7 +165,7 @@ export async function runTui(): Promise<string | null> {
   const s = p.spinner();
   s.start("Creating worktree...");
   try {
-    createWorktree(info.root, worktreePath, baseBranch as string, branchName);
+    createWorktree(info.root, worktreePath, baseBranch.ref, branchName);
     s.stop("Worktree created.");
   } catch (err: any) {
     s.stop("Failed.");

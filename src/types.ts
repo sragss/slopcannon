@@ -11,7 +11,7 @@ export interface RepoInfo {
   parentDir: string;
   remoteUrl: string | null;
   defaultBranch: string;
-  branches: string[];
+  branches: import("./git.js").BranchEntry[];
 }
 
 export interface CliArgs {

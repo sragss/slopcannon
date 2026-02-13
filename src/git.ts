@@ -38,32 +38,47 @@ function detectDefaultBranch(root: string): string {
   return exec(["branch", "--show-current"], root) || "main";
 }
 
-function listBranches(root: string, defaultBranch: string): string[] {
+export interface BranchEntry {
+  name: string; // display name (short)
+  ref: string;  // full ref to pass to git (local name or origin/name)
+}
+
+function listBranches(root: string, defaultBranch: string): BranchEntry[] {
   const raw = exec(
     ["branch", "-a", "--format=%(refname:short)"],
     root
   );
-  const seen = new Set<string>();
-  const branches: string[] = [];
+  const localBranches = new Set<string>();
+  const entries = new Map<string, BranchEntry>();
 
+  // First pass: collect local branches
+  for (const line of raw.split("\n")) {
+    const name = line.trim();
+    if (!name || name.startsWith("origin/")) continue;
+    localBranches.add(name);
+  }
+
+  // Second pass: build entries, preferring local refs
   for (const line of raw.split("\n")) {
     const name = line.trim();
     if (!name) continue;
-    // Normalize remote branches: origin/foo → foo
-    const short = name.startsWith("origin/")
-      ? name.replace("origin/", "")
-      : name;
+
+    const isRemote = name.startsWith("origin/");
+    const short = isRemote ? name.replace("origin/", "") : name;
     if (short === "HEAD") continue;
-    if (seen.has(short)) continue;
-    seen.add(short);
-    branches.push(short);
+    if (entries.has(short)) continue;
+
+    entries.set(short, {
+      name: short,
+      ref: localBranches.has(short) ? short : name, // use origin/x for remote-only
+    });
   }
 
-  // Sort default branch first
+  const branches = Array.from(entries.values());
   branches.sort((a, b) => {
-    if (a === defaultBranch) return -1;
-    if (b === defaultBranch) return 1;
-    return a.localeCompare(b);
+    if (a.name === defaultBranch) return -1;
+    if (b.name === defaultBranch) return 1;
+    return a.name.localeCompare(b.name);
   });
 
   return branches;
