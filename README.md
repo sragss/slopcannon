@@ -28,7 +28,7 @@ Add to `~/.zshrc` so your shell cds into the worktree:
 ```bash
 slopcannon() {
   local tmpfile=$(mktemp /tmp/slopcannon.XXXXXX)
-  bunx slopcannon --path-file "$tmpfile"
+  bunx slopcannon --path-file "$tmpfile" "$@"
   local p=$(cat "$tmpfile" 2>/dev/null)
   rm -f "$tmpfile"
   if [[ -n "$p" ]] && [[ -d "$p" ]]; then
