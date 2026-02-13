@@ -4,7 +4,7 @@
   "description": "Create a git worktree. Launch Claude Code. Ship slop.",
   "type": "module",
   "bin": {
-    "slopcannon": "./dist/cli.js"
+    "slopcannon": "dist/cli.js"
   },
   "scripts": {
     "build": "bun build ./src/cli.ts --outdir ./dist --target bun",
