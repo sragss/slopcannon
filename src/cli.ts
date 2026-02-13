@@ -16,7 +16,7 @@ slopcannon - Create a git worktree. Launch Claude Code. Ship slop.
 
 Usage:
   slopcannon                     Interactive TUI
-  slopcannon cleanup             Clean up merged/stale worktrees
+  slopcannon cleanup|clean       Clean up merged/stale worktrees
   slopcannon config              Configure settings
   slopcannon --path-file <path>  Write worktree path to file (for shell function)
   slopcannon --help              Show this help
@@ -39,7 +39,7 @@ function parseArgs(): CliArgs {
       result.pathFile = args[++i];
     } else if (args[i] === "config") {
       result.config = true;
-    } else if (args[i] === "cleanup") {
+    } else if (args[i] === "cleanup" || args[i] === "clean") {
       result.cleanup = true;
     } else if (!args[i].startsWith("-")) {
       console.error(`Unknown command: ${args[i]}\nRun 'slopcannon --help' for usage.`);
