@@ -41,6 +41,9 @@ function parseArgs(): CliArgs {
       result.config = true;
     } else if (args[i] === "cleanup") {
       result.cleanup = true;
+    } else if (!args[i].startsWith("-")) {
+      console.error(`Unknown command: ${args[i]}\nRun 'slopcannon --help' for usage.`);
+      process.exit(1);
     }
   }
 
