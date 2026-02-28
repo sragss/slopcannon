@@ -1,4 +1,6 @@
 import * as p from "@clack/prompts";
+import fs from "fs";
+import path from "path";
 import {
   getRepoInfo,
   validateBranchName,
@@ -173,6 +175,18 @@ export async function runTui(): Promise<string | null> {
     p.outro("Worktree creation failed.");
     return null;
   }
+
+  // Copy .env files to new worktree
+  try {
+    const envFiles = fs.readdirSync(info.root).filter(f => f.startsWith(".env"));
+    if (envFiles.length > 0) {
+      for (const f of envFiles) {
+        fs.copyFileSync(path.join(info.root, f), path.join(worktreePath, f));
+      }
+      p.log.info(`Copied ${envFiles.join(", ")}`);
+    }
+  } catch {}
+
 
   const style = loadConfig().activationStyle;
   if (style === "cannon") await cannonActivation();
