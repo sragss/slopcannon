@@ -176,12 +176,28 @@ export async function runTui(): Promise<string | null> {
     return null;
   }
 
-  // Copy .env files to new worktree
+  // Copy .env files to new worktree (recursive to catch monorepo subdirs)
   try {
-    const envFiles = fs.readdirSync(info.root).filter(f => f.startsWith(".env"));
+    const SKIP_DIRS = new Set(["node_modules", ".git", ".claude"]);
+    const envFiles: string[] = [];
+
+    function walkForEnv(dir: string) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          if (!SKIP_DIRS.has(entry.name)) walkForEnv(path.join(dir, entry.name));
+        } else if (entry.name.startsWith(".env")) {
+          envFiles.push(path.relative(info.root, path.join(dir, entry.name)));
+        }
+      }
+    }
+
+    walkForEnv(info.root);
+
     if (envFiles.length > 0) {
-      for (const f of envFiles) {
-        fs.copyFileSync(path.join(info.root, f), path.join(worktreePath, f));
+      for (const rel of envFiles) {
+        const destDir = path.join(worktreePath, path.dirname(rel));
+        fs.mkdirSync(destDir, { recursive: true });
+        fs.copyFileSync(path.join(info.root, rel), path.join(worktreePath, rel));
       }
       p.log.info(`Copied ${envFiles.join(", ")}`);
     }
