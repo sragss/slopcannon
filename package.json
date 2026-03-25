@@ -1,7 +1,7 @@
 {
   "name": "slopcannon",
-  "version": "0.1.7",
-  "description": "Create a git worktree. Launch Claude Code. Ship slop.",
+  "version": "0.1.8",
+  "description": "Create a git worktree. Launch Claude Code or Codex. Ship slop.",
   "type": "module",
   "bin": {
     "slopcannon": "dist/cli.js"

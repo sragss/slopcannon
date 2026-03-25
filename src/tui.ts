@@ -1,6 +1,7 @@
 import * as p from "@clack/prompts";
 import fs from "fs";
 import path from "path";
+import type { DepCheckResult, TuiResult } from "./types.js";
 import {
   getRepoInfo,
   validateBranchName,
@@ -92,7 +93,9 @@ async function typewriterActivation() {
   process.stdout.write("\n");
 }
 
-export async function runTui(): Promise<string | null> {
+export async function runTui(
+  deps: Pick<DepCheckResult, "claude" | "codex">
+): Promise<TuiResult | null> {
   p.intro("slopcannon");
 
   // Detect repo
@@ -125,6 +128,31 @@ export async function runTui(): Promise<string | null> {
     return null;
   }
   const baseBranch = (baseBranchEntry as typeof info.branches[number]);
+
+  const launcherOptions = [
+    deps.claude
+      ? {
+          value: "claude" as const,
+          label: "claude --dangerously-skip-permissions",
+        }
+      : null,
+    deps.codex
+      ? {
+          value: "codex" as const,
+          label: "codex --yolo",
+        }
+      : null,
+  ].filter((option): option is { value: "claude" | "codex"; label: string } => Boolean(option));
+
+  const launcher = await p.select({
+    message: "Launcher",
+    options: launcherOptions,
+    initialValue: deps.claude ? "claude" : "codex",
+  });
+  if (p.isCancel(launcher)) {
+    p.outro("Cancelled.");
+    return null;
+  }
 
   // New branch name
   const defaultName = randomBranchName();
@@ -209,5 +237,8 @@ export async function runTui(): Promise<string | null> {
   else if (style === "typewriter") await typewriterActivation();
 
   p.outro(worktreePath);
-  return worktreePath;
+  return {
+    worktreePath,
+    launcher: launcher as "claude" | "codex",
+  };
 }

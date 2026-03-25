@@ -12,18 +12,19 @@ if (typeof Bun === "undefined") {
 }
 
 const HELP = `
-slopcannon - Create a git worktree. Launch Claude Code. Ship slop.
+slopcannon - Create a git worktree. Launch Claude Code or Codex. Ship slop.
 
 Usage:
   slopcannon                     Interactive TUI
   slopcannon cleanup|clean       Clean up merged/stale worktrees
   slopcannon config              Configure settings
   slopcannon --path-file <path>  Write worktree path to file (for shell function)
+  slopcannon --launcher-file <path>  Write selected launcher to file
   slopcannon --help              Show this help
 
 What it does:
   git worktree add -b <branch> ../repo-branch origin/main
-  claude --dangerously-skip-permissions
+  then launches your selected CLI
 `.trim();
 
 function parseArgs(): CliArgs {
@@ -37,6 +38,8 @@ function parseArgs(): CliArgs {
       result.version = true;
     } else if (args[i] === "--path-file" && i + 1 < args.length) {
       result.pathFile = args[++i];
+    } else if (args[i] === "--launcher-file" && i + 1 < args.length) {
+      result.launcherFile = args[++i];
     } else if (args[i] === "config") {
       result.config = true;
     } else if (args[i] === "cleanup" || args[i] === "clean") {
@@ -54,6 +57,7 @@ function checkDeps(): DepCheckResult {
   return {
     git: Bun.which("git"),
     claude: Bun.which("claude"),
+    codex: Bun.which("codex"),
     gh: Bun.which("gh"),
     bun: Bun.which("bun"),
   };
@@ -96,9 +100,9 @@ async function main() {
   // Full dep checks for main flow
   requireGit(deps);
 
-  if (!deps.claude) {
+  if (!deps.claude && !deps.codex) {
     console.error(
-      "Error: claude CLI is not installed.\nInstall: https://docs.anthropic.com/en/docs/claude-code"
+      "Error: neither claude nor codex CLI is installed.\nInstall one of them before running slopcannon."
     );
     process.exit(1);
   }
@@ -108,19 +112,32 @@ async function main() {
   }
 
   // Run TUI
-  const worktreePath = await runTui();
-  if (!worktreePath) {
+  const tuiResult = await runTui({
+    claude: deps.claude,
+    codex: deps.codex,
+  });
+  if (!tuiResult) {
     process.exit(0);
   }
+  const { worktreePath, launcher } = tuiResult;
 
   // Mode dispatch
   if (args.pathFile) {
     await Bun.write(args.pathFile, worktreePath);
+  }
+  if (args.launcherFile) {
+    await Bun.write(args.launcherFile, launcher + "\n");
+  }
+  if (args.pathFile || args.launcherFile) {
     process.exit(0);
   }
 
-  // Launch claude directly
-  const proc = Bun.spawn(["claude", "--dangerously-skip-permissions"], {
+  const launchCommand =
+    launcher === "codex"
+      ? ["codex", "--yolo"]
+      : ["claude", "--dangerously-skip-permissions"];
+
+  const proc = Bun.spawn(launchCommand, {
     cwd: worktreePath,
     stdin: "inherit",
     stdout: "inherit",
