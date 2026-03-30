@@ -17,7 +17,6 @@ export interface RepoInfo {
 
 export interface CliArgs {
   pathFile?: string;
-  launcherFile?: string;
   help: boolean;
   version: boolean;
   config: boolean;

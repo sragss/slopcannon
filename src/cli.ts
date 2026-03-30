@@ -19,7 +19,6 @@ Usage:
   slopcannon cleanup|clean       Clean up merged/stale worktrees
   slopcannon config              Configure settings
   slopcannon --path-file <path>  Write worktree path to file (for shell function)
-  slopcannon --launcher-file <path>  Write selected launcher to file
   slopcannon --help              Show this help
 
 What it does:
@@ -38,8 +37,6 @@ function parseArgs(): CliArgs {
       result.version = true;
     } else if (args[i] === "--path-file" && i + 1 < args.length) {
       result.pathFile = args[++i];
-    } else if (args[i] === "--launcher-file" && i + 1 < args.length) {
-      result.launcherFile = args[++i];
     } else if (args[i] === "config") {
       result.config = true;
     } else if (args[i] === "cleanup" || args[i] === "clean") {
@@ -121,17 +118,12 @@ async function main() {
   }
   const { worktreePath, launcher } = tuiResult;
 
-  // Mode dispatch
+  // Write path file for shell function (cd into worktree)
   if (args.pathFile) {
     await Bun.write(args.pathFile, worktreePath);
   }
-  if (args.launcherFile) {
-    await Bun.write(args.launcherFile, launcher + "\n");
-  }
-  if (args.pathFile || args.launcherFile) {
-    process.exit(0);
-  }
 
+  // Launch CLI
   const launchCommand =
     launcher === "codex"
       ? ["codex", "--yolo"]
