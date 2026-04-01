@@ -132,6 +132,13 @@ async function main() {
     process.exit(0);
   }
 
+  // @clack/prompts leaves stdin in flowing mode after the TUI completes.
+  // With Bun.spawn stdin:"inherit", parent and child share the same fd —
+  // if the parent's event loop is still polling it, keystrokes get stolen.
+  process.stdin.removeAllListeners();
+  process.stdin.pause();
+  process.stdin.unref();
+
   const launchCommand =
     launcher === "codex"
       ? ["codex", "--yolo"]
